@@ -1,0 +1,8 @@
+.idea/
+
+#rust
+target/
+
+#C#
+obj/
+bin/
