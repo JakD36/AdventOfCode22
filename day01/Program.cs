@@ -6,7 +6,7 @@ class Program
 {
     public static void Main()
     {
-        Part2("input.txt"); 
+        Part1("input.txt"); 
         Part2("input.txt");        
     }
 
