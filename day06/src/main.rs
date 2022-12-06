@@ -43,6 +43,15 @@ fn main() {
     let start = Instant::now();
     let part2 = find_start_of_marker_with_skip(signal.as_str(), MarkerType::MESSAGE);
     println!("Part 2 = {}, calculated in {} us", part2, (Instant::now() - start).as_micros());
+    println!();
+    
+    println!("Using skip + bitmask");
+    let start = Instant::now();
+    let part1 = find_start_of_marker_optimum(signal.as_str(), MarkerType::PACKET);
+    println!("Part 1 = {}, calculated in {} us", part1, (Instant::now() - start).as_micros());
+    let start = Instant::now();
+    let part2 = find_start_of_marker_optimum(signal.as_str(), MarkerType::MESSAGE);
+    println!("Part 2 = {}, calculated in {} us", part2, (Instant::now() - start).as_micros());
 }
 
 #[derive(Clone, Copy)]
@@ -155,7 +164,7 @@ fn find_start_of_marker_with_skip(signal: &str, _type: MarkerType) -> u32
     assert!(signal.len() >= unique_set_len as usize, "Input signal is expected to be greater than {} characters long.", unique_set_len);
     assert!(unique_set_len < 256, "Marker size can't be longer than 256 as we store our indices using a u8");
     
-    let mut char_found_at_index = [0u8; 26];
+    let mut map_char_to_index = [0u8; 26];
     let chars = signal.chars().collect::<Vec<char>>();
     
     let mut look_back = unique_set_len as usize;
@@ -165,24 +174,54 @@ fn find_start_of_marker_with_skip(signal: &str, _type: MarkerType) -> u32
         for j in (0..look_back).rev()
         {
             let char_index = chars[idx - j] as usize - 'a' as usize;
-            if char_found_at_index[char_index] > 0
+            if map_char_to_index[char_index] > 0
             {
-                let skip_by= char_found_at_index[char_index];
-                char_found_at_index[char_index] = (unique_set_len - j as u32) as u8;// +1 to adjust skip by ahead of time
+                let skip_by= map_char_to_index[char_index];
+                map_char_to_index[char_index] = (unique_set_len - j as u32) as u8;
                 idx += skip_by as usize;
                 look_back = skip_by as usize + j;
                 
-                char_found_at_index.iter_mut().for_each(|x| *x = std::cmp::max(*x as i16 - (skip_by as i16), 0) as u8);
+                map_char_to_index.iter_mut().for_each(|x| *x = std::cmp::max(*x as i16 - (skip_by as i16), 0) as u8);
                 continue 'outer;
             }
             else
             {
-                char_found_at_index[char_index] = (unique_set_len - j as u32) as u8; // +1 to adjust skip by ahead of time
+                map_char_to_index[char_index] = (unique_set_len - j as u32) as u8;
             }
         }
         return idx as u32 + 1;
     }
     
+    return 0;
+}
+
+fn find_start_of_marker_optimum(signal: &str, _type: MarkerType) -> u32
+{
+    let unique_set_len = _type as u32;
+    assert!(signal.len() >= unique_set_len as usize, "Input signal is expected to be greater than {} characters long.", unique_set_len);
+    assert!(unique_set_len < 256, "Marker size can't be longer than 256 as we store our indices using a u8");
+
+    let chars = signal.chars().collect::<Vec<char>>();
+    let mut idx = unique_set_len as usize - 1;
+    'outer :while idx < chars.len()
+    {
+        let mut bitmask = 0;
+        for j in (0..unique_set_len as usize).rev()
+        {
+            let mask = 1u32 << (chars[idx - j] as u32 - 'a' as u32);
+            if (bitmask & mask) > 0
+            {
+                idx += j + 1;
+                continue 'outer;
+            }
+            else
+            {
+                bitmask |= mask;
+            }
+        }
+        return idx as u32 + 1;
+    }
+
     return 0;
 }
 
