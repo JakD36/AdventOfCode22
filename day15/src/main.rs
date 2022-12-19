@@ -20,11 +20,11 @@ fn main()
     
     let start = Instant::now();
     part2(filepath, (0, 4_000_000));
-    println!("Part 2 took {} s", (Instant::now() - start).as_secs())
+    println!("Part 2 took {} s", (Instant::now() - start).as_secs());
 
     let start = Instant::now();
     par_part2(filepath, (0, 4_000_000));
-    println!("Part 2 took {} s", (Instant::now() - start).as_secs())
+    println!("Part 2 took {} s", (Instant::now() - start).as_secs());
 }
 
 fn part1_attempt1(filepath: &str, row: i32)
