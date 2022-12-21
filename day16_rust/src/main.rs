@@ -13,106 +13,120 @@ fn main() {
     let max = calculate_max(aa_idx, &arr, len, 1 << aa_idx, 30, 0);
     println!("Part 1 {} and took {} ms", max, (Instant::now() - start).as_millis());
     let start = Instant::now();
-    let max = calculate_max_2((aa_idx, 0), (aa_idx, 0), &arr, len, 1 << aa_idx, 26, 0);
+    let max = calculate_max_2(Person{idx: aa_idx, time_remaining: 0}, Person{idx: aa_idx, time_remaining: 0}, &arr, len, 1 << aa_idx, 26, 0);
     println!("Part 2 {} and took {} ms", max, (Instant::now() - start).as_millis());
 }
 
-fn calculate_max(current: usize, data: &[(u8, [u8;16]);16], len: usize, visited: u16, time_remaining: i8, score: u32) -> u32
+fn calculate_max(current: usize, valves: &[Valve;16], len: usize, visited: u16, time_remaining: i8, score: u32) -> u32
 {
     let mut max = score;
     for i in 0..len
     {
-        let remaining = time_remaining - (data[current].1[i] + 1) as i8;
+        let remaining = time_remaining - (valves[current].distance_to[i] + 1) as i8;
         if i == current || ((1 << i) & visited) > 0 || remaining <= 0
         {
             continue;
         }
         
-        max = std::cmp::max(max, calculate_max(i, data, len, visited | 1 << i as u16, remaining, score + remaining as u32 * data[i].0 as u32));
+        max = std::cmp::max(max, calculate_max(i, valves, len, visited | 1 << i as u16, remaining, score + remaining as u32 * valves[i].flowrate as u32));
     }
     return max;
 }
 
-fn calculate_max_2(person1: (usize, u8), person2: (usize, u8), data: &[(u8, [u8;16]);16], len: usize, visited: u16, time_remaining: i8, score: u32) -> u32
+#[derive(Clone, Copy)]
+struct Person
+{
+    idx: usize,
+    time_remaining: u8
+}
+
+#[derive(Clone, Copy)]
+struct Valve
+{
+    flowrate: u8,
+    distance_to: [u8;16]
+}
+
+fn calculate_max_2(person1: Person, person2: Person, valves: &[Valve;16], len: usize, visited: u16, time_remaining: i8, score: u32) -> u32
 {
     let mut max = score;
-    if person1.1 == 0 && person2.1 == 0
+    if person1.time_remaining == 0 && person2.time_remaining == 0
     {
         for i in 0..len
         {
-            let remaining = time_remaining - (data[person1.0].1[i] + 1) as i8;
-            if i == person1.0 || i == person2.0 || ((1 << i) & visited) > 0 || remaining <= 0
+            let remaining = time_remaining - (valves[person1.idx].distance_to[i] + 1) as i8;
+            if i == person1.idx || i == person2.idx || ((1 << i) & visited) > 0 || remaining <= 0
             {
                 continue;
             }
-            let person1 = (i, data[person1.0].1[i] + 1); // Time remaining before person 1 can take next action
-            let score = score + remaining as u32 * data[i].0 as u32;
+            let person1 = Person{idx:i, time_remaining: valves[person1.idx].distance_to[i] + 1}; // Time remaining before person 1 can take next action
+            let score = score + remaining as u32 * valves[i].flowrate as u32;
             for j in 0..len
             {
-                let remaining = time_remaining - (data[person2.0].1[j] + 1) as i8;
-                if j == person1.0 || j == person2.0 || ((1 << j) & visited) > 0 || remaining <= 0
+                let remaining = time_remaining - (valves[person2.idx].distance_to[j] + 1) as i8;
+                if j == person1.idx || j == person2.idx || ((1 << j) & visited) > 0 || remaining <= 0
                 {
                     continue;
                 }
                 
-                let person2 = (j, data[person2.0].1[j] + 1); // Time remaining before person 1 can take next action
-                let score = score + remaining as u32 * data[j].0 as u32;
+                let person2 = Person{idx:j, time_remaining: valves[person2.idx].distance_to[j] + 1}; // Time remaining before person 1 can take next action
+                let score = score + remaining as u32 * valves[j].flowrate as u32;
                 
-                let time_to_next_action = std::cmp::min(person1.1, person2.1);
-                let person1 = (person1.0, person1.1 - time_to_next_action);
-                let person2 = (person2.0, person2.1 - time_to_next_action);
+                let time_to_next_action = std::cmp::min(person1.time_remaining, person2.time_remaining);
+                let person1 = Person{idx:person1.idx, time_remaining: person1.time_remaining - time_to_next_action};
+                let person2 = Person{idx:person2.idx, time_remaining: person2.time_remaining - time_to_next_action};
                 
-                max = std::cmp::max(max, calculate_max_2(person1, person2, data, len, visited | 1 << person1.0 as u16 | 1 << person2.0 as u16, time_remaining - time_to_next_action as i8, score));        
+                max = std::cmp::max(max, calculate_max_2(person1, person2, valves, len, visited | 1 << person1.idx as u16 | 1 << person2.idx as u16, time_remaining - time_to_next_action as i8, score));        
             }
         }
         
     }
-    else if person1.1 == 0
+    else if person1.time_remaining == 0
     {
         for i in 0..len
         {
             let mut person1 = person1;
             let mut score = score;
-            let remaining = time_remaining - (data[person1.0].1[i] + 1) as i8;
-            if i == person1.0 || i == person2.0 || ((1 << i) & visited) > 0 || remaining <= 0
+            let remaining = time_remaining - (valves[person1.idx].distance_to[i] + 1) as i8;
+            if i == person1.idx || i == person2.idx || ((1 << i) & visited) > 0 || remaining <= 0
             {
                 continue;
             }
-            person1 = (i, data[person1.0].1[i] + 1); // Time remaining before person 1 can take next action
-            score = score + remaining as u32 * data[i].0 as u32;
+            person1 = Person{idx: i, time_remaining: valves[person1.idx].distance_to[i] + 1};
+            score = score + remaining as u32 * valves[i].flowrate as u32;
 
-            let time_to_next_action = std::cmp::min(person1.1, person2.1);
-            let person1 = (person1.0, person1.1 - time_to_next_action);
-            let person2 = (person2.0, person2.1 - time_to_next_action);
-            
-            max = std::cmp::max(max, calculate_max_2(person1, person2, data, len, visited | 1 << person1.0 as u16, time_remaining - time_to_next_action as i8, score));
+            let time_to_next_action = std::cmp::min(person1.time_remaining, person2.time_remaining);
+            let person1 = Person{idx:person1.idx, time_remaining: person1.time_remaining - time_to_next_action};
+            let person2 = Person{idx:person2.idx, time_remaining: person2.time_remaining - time_to_next_action};
+
+            max = std::cmp::max(max, calculate_max_2(person1, person2, valves, len, visited | 1 << person1.idx as u16, time_remaining - time_to_next_action as i8, score));
         }
     }
-    else if person2.1 == 0
+    else if person2.time_remaining == 0
     {
         for i in 0..len
         {
             let mut person2 = person2;
             let mut score = score;
-            let remaining = time_remaining - (data[person2.0].1[i] + 1) as i8;
-            if i == person1.0 || i == person2.0 || ((1 << i) & visited) > 0 || remaining <= 0
+            let remaining = time_remaining - (valves[person2.idx].distance_to[i] + 1) as i8;
+            if i == person1.idx || i == person2.idx || ((1 << i) & visited) > 0 || remaining <= 0
             {
                 continue;
             }
-            person2 = (i, data[person2.0].1[i] + 1); // Time remaining before person 1 can take next action
-            score = score + remaining as u32 * data[i].0 as u32;
+            person2 = Person{idx:i, time_remaining: valves[person2.idx].distance_to[i] + 1};
+            score = score + remaining as u32 * valves[i].flowrate as u32;
 
-            let time_to_next_action = std::cmp::min(person1.1, person2.1);
-            let person1 = (person1.0, person1.1 - time_to_next_action);
-            let person2 = (person2.0, person2.1 - time_to_next_action);
-            
-            max = std::cmp::max(max, calculate_max_2(person1, person2, data, len, visited | 1 << person2.0 as u16, time_remaining - time_to_next_action as i8, score));
+            let time_to_next_action = std::cmp::min(person1.time_remaining, person2.time_remaining);
+            let person1 = Person{idx:person1.idx, time_remaining: person1.time_remaining - time_to_next_action};
+            let person2 = Person{idx:person2.idx, time_remaining: person2.time_remaining - time_to_next_action};
+
+            max = std::cmp::max(max, calculate_max_2(person1, person2, valves, len, visited | 1 << person2.idx as u16, time_remaining - time_to_next_action as i8, score));
         }
     }
     return max;
 }
 
-fn build_input(filepath: &str) -> ([(u8, [u8;16]);16], usize, usize) 
+fn build_input(filepath: &str) -> ([Valve;16], usize, usize) 
 {
     let contents = read_to_string(filepath).expect(format!("Failed to read {}", filepath).as_str());
     
@@ -161,20 +175,20 @@ fn build_input(filepath: &str) -> ([(u8, [u8;16]);16], usize, usize)
     println!("Building Hashmap graph takes {} ms", (Instant::now() - start).as_millis());
     
     let start = Instant::now();
-    let mut arr: [(u8, [u8;16]);16] = [(0, [0;16]);16];
+    let mut arr: [Valve;16] = [Valve{flowrate: 0, distance_to: [0;16]};16];
     for (name, flowrate, _) in input.filter(|(_, y,_)| *y > 0)
     {
-        arr[valve_names.clone().position(|x|name == x).unwrap()].0 = flowrate;
+        arr[valve_names.clone().position(|x|name == x).unwrap()].flowrate = flowrate;
     }
     for (idx, x) in vec.iter().enumerate()
     {
         for (name, dist) in x.iter()
         {
-            arr[idx].1[valve_names.clone().position(|x| x == name).expect(format!("Failed to find name matching {}",name).as_str())] = *dist;    
+            arr[idx].distance_to[valve_names.clone().position(|x| x == name).expect(format!("Failed to find name matching {}",name).as_str())] = *dist;    
         }
     }
     let len = valve_names.clone().count();
-    println!("Building Compact form of {} bytes takes {} ms", size_of::<[(u8,[u8;16]);16]>(), (Instant::now() - start).as_millis());
+    println!("Building Compact form of {} bytes takes {} ms", size_of::<[Valve;16]>(), (Instant::now() - start).as_millis());
     let aa_idx = valve_names.clone().position(|x|"AA" == x).unwrap();
 
     (arr, len, aa_idx)
